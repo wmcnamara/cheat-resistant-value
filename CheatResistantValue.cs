@@ -32,7 +32,7 @@ struct CheatResistantValue<T> where T : struct, IComparable, IFormattable, IConv
 
     private void Validate()
     {
-        if (!first.Equals(second) && second.Equals(third))
+        if (first.Equals(second) && second.Equals(third))
         {
             return;
         }
