@@ -6,7 +6,7 @@ using System;
  * To use it simply replace the value used to store whatever value you wish to have some resistance against, and use CheatResistantValue instead for the same type.
  * Users can bypass this by overwriting the three clone numbers, and the previousBackupValue. The previousBackupValue makes it much harder to crack for a newbie but its still possible.
  * 
- * You will have a small memory and performance hit (uses 3 * sizeof(T) more memory than the direct value and setting it is slightly slower due to validation), but for a couple values it doesnt matter
+ * You will have a small memory and performance hit (uses 4 * sizeof(T) more memory than the direct value and setting it is slightly slower due to validation), but for a couple values it doesnt matter
 */
 struct CheatResistantValue<T> where T : struct, IComparable, IFormattable, IConvertible, IComparable<T>, IEquatable<T>
 {
