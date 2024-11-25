@@ -1,5 +1,5 @@
 # cheat-resistant-value
-Simple C# wrapper class for values that provides a minimal level of protection against cheating.
+Simple C# wrapper class for values that provides a minimal level of protection against address scanning tools like cheat engine.
 
 It has some limitations, mainly if the user can manage to overwrite all the duplicates and the security backup value, they can indeed still cheat the data, but for a user who is not saavy they will not know how to do this.
 
