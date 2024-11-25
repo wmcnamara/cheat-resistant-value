@@ -62,6 +62,9 @@ public struct CheatResistantValue<T> where T : struct, IComparable, IFormattable
 
         if (realValueHash == storedValueHash)
         {
+            //If the first is correct, when validating reset the others just in case they have been tampered (:
+            second = first;
+            third = first;
             return;
         }
 
