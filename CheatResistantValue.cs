@@ -21,7 +21,7 @@ public enum CRVCheatResponseBehaviour
  * The actual validation is done with hashes, instead of a naive double value comparison that is easily hacked away by a saavy CE user who knows to whittle down addresses and then change all that appear
  * Has a revert behaviour in the event that the value is cheated and cannot be recovered that is customizable
 */
-public struct CheatResistantValue<T> where T : struct, IComparable, IFormattable, IConvertible, IComparable<T>, IEquatable<T>
+public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible, IComparable<T>, IEquatable<T>
 {
     CheatResistantValue(T initialValue, CRVCheatResponseBehaviour behaviour = CRVCheatResponseBehaviour.RevertToDefault)
     {
