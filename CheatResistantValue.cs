@@ -1,17 +1,49 @@
 using System;
 
+
+//This is the behaviour the CRV will use if the value has been cheated and cannot be recovered
+public enum CRVCheatResponseBehaviour
+{
+    RevertToDefault, //If all the backup values are modified and the correct value cannot be recovered the CRV will revert to the default construction of T (new T())
+    RevertToPreviousValue, //This is far less secure, and should be avoided. If used the CRV will revert to the previous value used. Use only when reverting to default will cause damage
+}
+
+
+public class CheatResistantValue
+{
+    public delegate void OnCheatDetectedEventHandler();
+
+    public static event OnCheatDetectedEventHandler OnAnyValueCheatDetected; //Static event called when any CRV detects a cheat
+}
+
 /* 
  * The cheat resistant data type is intended to be used as an alternative to direct in memory values that represent a value that may be cheated.
- * It works by using three copies of the same value, that are compared and validated against each other to throw off memory editing programs like cheat engine.
+ * It works by using three copies of the same value, and a hash of the correct value, that are compared and validated against each other to throw off memory editing programs like cheat engine.
  * To use it simply replace the value used to store whatever value you wish to have some resistance against, and use CheatResistantValue instead for the same type.
- * Users can bypass this by overwriting the three clone numbers, and the previousBackupValue. The previousBackupValue makes it much harder to crack for a newbie but its still possible.
  * 
- * Because of the nature of cheat engine, a more secure implementation of this may look like using multiple PREVIOUS values as the comparison aswell, or maybe one where a previous value hash is kept and compared.
  * This makes it much harder for a cheater as they wont be able to see all of the values they can edit easily at the same time to cheat it with a single cheat engine instance unless they are very skilled at scanning.
- * You will have a small memory and performance hit (uses 4 * sizeof(T) more memory than the direct value and setting it is slightly slower due to validation), but for a couple values it doesnt matter
+ * You will have a small memory and performance hit (uses (4 * sizeof(T)) + (2 * sizeof(int)) more memory than the direct value and setting it is slightly slower due to validation), but for a couple values it doesnt matter
+ * 
+ * This has three security features:
+ * 3 copies of the same value are stored, which if only one is modified, it will recover the correct value
+ * The actual validation is done with hashes, instead of a naive double value comparison that is easily hacked away by a saavy CE user who knows to whittle down addresses and then change all that appear
+ * Has a revert behaviour in the event that the value is cheated and cannot be recovered that is customizable
 */
-struct CheatResistantValue<T> where T : struct, IComparable, IFormattable, IConvertible, IComparable<T>, IEquatable<T>
+public class CheatResistantValue<T> : CheatResistantValue where T : struct, IComparable, IConvertible, IComparable<T>, IEquatable<T>
 {
+    public CheatResistantValue(T initialValue, CRVCheatResponseBehaviour behaviour = CRVCheatResponseBehaviour.RevertToDefault)
+    {
+        first = initialValue;
+        second = initialValue;
+        third = initialValue;
+
+        backupValue = initialValue;
+
+        CheatResponseBehaviour = behaviour;
+
+        storedValueHash = first.GetHashCode();
+    }
+
     public T Get()
     {
         Validate();
@@ -19,58 +51,88 @@ struct CheatResistantValue<T> where T : struct, IComparable, IFormattable, IConv
         return first;
     }
 
-    public void Set(T value)
+    public void Set(T newValue)
     {
         Validate();
 
-        previousBackupValue = first;
+        backupValue = first;
 
-        first = value;
-        second = value;
-        third = value;
+        first = newValue;
+        second = newValue;
+        third = newValue;
+
+        storedValueHash = first.GetHashCode();
     }
 
     private void Validate()
     {
-        if (first.Equals(second) && second.Equals(third))
-        {
-            return;
-        }
+        //Perform the actual comparison with a hash. 
+        //If the hash isnt used for a comparison, a user of CE who is value scanning for whatever they wish to change could simply change all of the values that are shown in the CE window.
+        //Not doing this would make a three way comparison succeed in such a case, breaking the system.
+        int realValueHash = first.GetHashCode();
 
-        //Determine which value is the wrong one by matching against other two
-
-        //First is incorrect
-        if (!first.Equals(second) && second.Equals(third))
+        if (realValueHash == storedValueHash)
         {
-            first = second;
-            return;
-        }
-
-        //Second is incorrect
-        if (!second.Equals(third) && third.Equals(first))
-        {
-            second = third;
-            return;
-        }
-
-        //Third is incorrect
-        if (!third.Equals(first) && first.Equals(second))
-        {
+            //If the first is correct, when validating reset the others just in case they have been tampered (:
+            second = first;
             third = first;
             return;
         }
 
-        //If we are here, two or more are incorrect. That means that atleast two were overwritten.
-        //In this case, we dont have a reliable gauge of the correct value, and we can simply revert to the previous as a security measure
+        //Logic to handle a situation where realValue is cheated starts here
+        OnAnyValueCheatDetected.Invoke();
+        OnCheatDetected.Invoke();
 
-        first = previousBackupValue;
-        second = previousBackupValue;
-        third = previousBackupValue;
+        //Determine which value is the wrong one by matching against other two, and try to recover the correct value
+
+        //Second is still valid; revert to it
+        if (second.GetHashCode() == storedValueHash)
+        {
+            first = second;
+            third = second;
+
+            return;
+        }
+
+        //Third is still valid; revert to it
+        if (third.GetHashCode() == storedValueHash)
+        {
+            first = third;
+            second = third;
+
+            return;
+        }
+
+        //If we are here, it means all of the values have been modified, and the original value cannot be recovered. Go to the fallback cheat response behaviour
+        switch (CheatResponseBehaviour)
+        {
+            case CRVCheatResponseBehaviour.RevertToDefault:
+                first = new T();
+                second = first;
+                third = first;
+
+                storedValueHash = first.GetHashCode();
+                break;
+
+            case CRVCheatResponseBehaviour.RevertToPreviousValue:
+                first = backupValue;
+                second = backupValue;
+                third = backupValue;
+
+                storedValueHash = first.GetHashCode();
+                break;
+        }
     }
+
+    public CRVCheatResponseBehaviour CheatResponseBehaviour { get; set; }
+
+    public event OnCheatDetectedEventHandler OnCheatDetected; //Fired when the value in this CRV is cheated
 
     private T first;
     private T second;
     private T third;
 
-    private T previousBackupValue;
+    private T backupValue;
+
+    private int storedValueHash;
 }
