@@ -58,6 +58,9 @@ public class CheatResistantValue<T> : CheatResistantValue where T : struct, ICom
         backupValue = first;
 
         first = newValue;
+        second = newValue;
+        third = newValue;
+
         storedValueHash = first.GetHashCode();
     }
 
@@ -79,7 +82,7 @@ public class CheatResistantValue<T> : CheatResistantValue where T : struct, ICom
         //Logic to handle a situation where realValue is cheated starts here
         OnAnyValueCheatDetected.Invoke();
         OnCheatDetected.Invoke();
-        
+
         //Determine which value is the wrong one by matching against other two, and try to recover the correct value
 
         //Second is still valid; revert to it
