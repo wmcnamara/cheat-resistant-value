@@ -8,6 +8,14 @@ public enum CRVCheatResponseBehaviour
     RevertToPreviousValue, //This is far less secure, and should be avoided. If used the CRV will revert to the previous value used. Use only when reverting to default will cause damage
 }
 
+
+public class CheatResistantValue
+{
+    public delegate void OnCheatDetectedEventHandler();
+
+    public static event OnCheatDetectedEventHandler OnAnyValueCheatDetected; //Static event called when any CRV detects a cheat
+}
+
 /* 
  * The cheat resistant data type is intended to be used as an alternative to direct in memory values that represent a value that may be cheated.
  * It works by using three copies of the same value, and a hash of the correct value, that are compared and validated against each other to throw off memory editing programs like cheat engine.
@@ -21,9 +29,9 @@ public enum CRVCheatResponseBehaviour
  * The actual validation is done with hashes, instead of a naive double value comparison that is easily hacked away by a saavy CE user who knows to whittle down addresses and then change all that appear
  * Has a revert behaviour in the event that the value is cheated and cannot be recovered that is customizable
 */
-public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible, IComparable<T>, IEquatable<T>
+public class CheatResistantValue<T> : CheatResistantValue where T : struct, IComparable, IConvertible, IComparable<T>, IEquatable<T>
 {
-    CheatResistantValue(T initialValue, CRVCheatResponseBehaviour behaviour = CRVCheatResponseBehaviour.RevertToDefault)
+    public CheatResistantValue(T initialValue, CRVCheatResponseBehaviour behaviour = CRVCheatResponseBehaviour.RevertToDefault)
     {
         first = initialValue;
         second = initialValue;
@@ -31,7 +39,7 @@ public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible
 
         backupValue = initialValue;
 
-        cheatResponseBehaviour = behaviour;
+        CheatResponseBehaviour = behaviour;
 
         storedValueHash = first.GetHashCode();
     }
@@ -69,7 +77,9 @@ public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible
         }
 
         //Logic to handle a situation where realValue is cheated starts here
-
+        OnAnyValueCheatDetected.Invoke();
+        OnCheatDetected.Invoke();
+        
         //Determine which value is the wrong one by matching against other two, and try to recover the correct value
 
         //Second is still valid; revert to it
@@ -91,7 +101,7 @@ public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible
         }
 
         //If we are here, it means all of the values have been modified, and the original value cannot be recovered. Go to the fallback cheat response behaviour
-        switch (cheatResponseBehaviour)
+        switch (CheatResponseBehaviour)
         {
             case CRVCheatResponseBehaviour.RevertToDefault:
                 first = new T();
@@ -111,13 +121,15 @@ public struct CheatResistantValue<T> where T : struct, IComparable, IConvertible
         }
     }
 
+    public CRVCheatResponseBehaviour CheatResponseBehaviour { get; set; }
+
+    public event OnCheatDetectedEventHandler OnCheatDetected; //Fired when the value in this CRV is cheated
+
     private T first;
     private T second;
     private T third;
 
     private T backupValue;
-
-    private CRVCheatResponseBehaviour cheatResponseBehaviour;
 
     private int storedValueHash;
 }
