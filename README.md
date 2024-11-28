@@ -26,7 +26,8 @@ And they're protected! To read and write the value simply use the `.Get()` and `
 
 You can use these values with a custom constructor to assign a default to the values, or to change their value fallback behaviour.
 
-**Fallback Behaviours**
+*Fallback Behaviours*
+
 CRV has a few different fallback behaviours, which are what the CRV should do in the event that the value is cheated and cannot be recovered.
 
 1. `RevertToDefault`
@@ -38,6 +39,7 @@ CRV has a few different fallback behaviours, which are what the CRV should do in
     Only use this if reverting to default will result in a catastrophic result
 
 **Knowing when cheating has occured**
+
 Each CRV fires an event that can be subscribed to when cheating is detected.
 
 ```cpp
