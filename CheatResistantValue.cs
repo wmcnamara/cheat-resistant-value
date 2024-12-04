@@ -14,6 +14,11 @@ public class CheatResistantValue
     public delegate void OnCheatDetectedEventHandler();
 
     public static event OnCheatDetectedEventHandler OnAnyValueCheatDetected; //Static event called when any CRV detects a cheat
+
+    public static void FireOnAnyValueCheatDetected()
+    {
+        OnAnyValueCheatDetected.Invoke();
+    }
 }
 
 /* 
@@ -80,7 +85,7 @@ public class CheatResistantValue<T> : CheatResistantValue where T : struct, ICom
         }
 
         //Logic to handle a situation where realValue is cheated starts here
-        OnAnyValueCheatDetected.Invoke();
+        FireOnAnyValueCheatDetected();
         OnCheatDetected.Invoke();
 
         //Determine which value is the wrong one by matching against other two, and try to recover the correct value
